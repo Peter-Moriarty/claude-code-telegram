@@ -120,6 +120,8 @@ class ClaudeResponse:
     is_error: bool = False
     error_type: Optional[str] = None
     tools_used: List[Dict[str, Any]] = field(default_factory=list)
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 @dataclass
@@ -346,8 +348,10 @@ class ClaudeSDKManager:
                 timeout=self.config.claude_timeout_seconds,
             )
 
-            # Extract cost, tools, and session_id from result message
+            # Extract cost, tools, tokens, and session_id from result message
             cost = 0.0
+            input_tokens = 0
+            output_tokens = 0
             tools_used: List[Dict[str, Any]] = []
             claude_session_id = None
             result_content = None
@@ -357,6 +361,11 @@ class ClaudeSDKManager:
                     claude_session_id = getattr(message, "session_id", None)
                     result_content = getattr(message, "result", None)
                     tools_used = self._extract_tools_from_messages(messages)
+                    # Extract token usage from ResultMessage.usage dict
+                    usage = getattr(message, "usage", None) or {}
+                    if isinstance(usage, dict):
+                        input_tokens = usage.get("input_tokens", 0) or 0
+                        output_tokens = usage.get("output_tokens", 0) or 0
                     break
 
             # Fallback: extract session_id from StreamEvent messages if
@@ -405,6 +414,8 @@ class ClaudeSDKManager:
                     ]
                 ),
                 tools_used=tools_used,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
             )
 
         except asyncio.TimeoutError:

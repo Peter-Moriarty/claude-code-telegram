@@ -45,6 +45,8 @@ class ClaudeSession:
     message_count: int = 0
     tools_used: List[str] = field(default_factory=list)
     is_new_session: bool = False  # True if session hasn't been sent to Claude Code yet
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
 
     def is_expired(self, timeout_hours: int) -> bool:
         """Check if session has expired."""
@@ -57,6 +59,8 @@ class ClaudeSession:
         self.total_cost += response.cost
         self.total_turns += response.num_turns
         self.message_count += 1
+        self.total_input_tokens += response.input_tokens
+        self.total_output_tokens += response.output_tokens
 
         # Track unique tools
         if response.tools_used:
@@ -77,6 +81,8 @@ class ClaudeSession:
             "total_turns": self.total_turns,
             "message_count": self.message_count,
             "tools_used": self.tools_used,
+            "total_input_tokens": self.total_input_tokens,
+            "total_output_tokens": self.total_output_tokens,
         }
 
     @classmethod
@@ -92,6 +98,8 @@ class ClaudeSession:
             total_turns=data.get("total_turns", 0),
             message_count=data.get("message_count", 0),
             tools_used=data.get("tools_used", []),
+            total_input_tokens=data.get("total_input_tokens", 0),
+            total_output_tokens=data.get("total_output_tokens", 0),
         )
 
 
@@ -352,6 +360,8 @@ class SessionManager:
                 "messages": session.message_count,
                 "tools_used": session.tools_used,
                 "expired": session.is_expired(self.config.session_timeout_hours),
+                "input_tokens": session.total_input_tokens,
+                "output_tokens": session.total_output_tokens,
             }
 
         return None

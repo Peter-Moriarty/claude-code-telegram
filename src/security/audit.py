@@ -10,11 +10,12 @@ Features:
 import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import structlog
 
-# from src.exceptions import SecurityError  # Future use
+if TYPE_CHECKING:
+    from ..storage.repositories import AuditLogRepository
 
 logger = structlog.get_logger()
 
@@ -120,6 +121,91 @@ class InMemoryAuditStorage(AuditStorage):
         # Sort by timestamp (newest first) and limit
         filtered_events.sort(key=lambda e: e.timestamp, reverse=True)
         return filtered_events[:limit]
+
+    async def get_security_violations(
+        self, user_id: Optional[int] = None, limit: int = 100
+    ) -> List[AuditEvent]:
+        """Get security violations."""
+        return await self.get_events(
+            user_id=user_id, event_type="security_violation", limit=limit
+        )
+
+
+class SQLiteAuditStorage(AuditStorage):
+    """SQLite-backed audit storage via the existing AuditLogRepository."""
+
+    def __init__(self, audit_repo: "AuditLogRepository") -> None:
+        self.audit_repo = audit_repo
+
+    async def store_event(self, event: AuditEvent) -> None:
+        """Store audit event in SQLite."""
+        from ..storage.models import AuditLogModel
+
+        model = AuditLogModel(
+            user_id=event.user_id,
+            event_type=event.event_type,
+            timestamp=event.timestamp,
+            event_data={
+                **event.details,
+                "risk_level": event.risk_level,
+                "session_id": event.session_id,
+            },
+            success=event.success,
+            ip_address=event.ip_address,
+        )
+        await self.audit_repo.log_event(model)
+
+        # Log high-risk events to structlog for immediate visibility
+        if event.risk_level in ["high", "critical"]:
+            logger.warning(
+                "High-risk security event",
+                event_type=event.event_type,
+                user_id=event.user_id,
+                risk_level=event.risk_level,
+                details=event.details,
+            )
+
+    async def get_events(
+        self,
+        user_id: Optional[int] = None,
+        event_type: Optional[str] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[AuditEvent]:
+        """Retrieve audit events from SQLite."""
+        if user_id is not None:
+            rows = await self.audit_repo.get_user_audit_log(user_id, limit=limit)
+        else:
+            hours = 720  # 30 days default
+            if start_time:
+                delta = datetime.now(UTC) - start_time
+                hours = max(int(delta.total_seconds() / 3600), 1)
+            rows = await self.audit_repo.get_recent_audit_log(hours=hours)
+
+        events = []
+        for row in rows:
+            data = row.event_data or {}
+            events.append(
+                AuditEvent(
+                    timestamp=row.timestamp,
+                    user_id=row.user_id,
+                    event_type=row.event_type,
+                    success=row.success,
+                    details={k: v for k, v in data.items()
+                             if k not in ("risk_level", "session_id")},
+                    ip_address=row.ip_address,
+                    session_id=data.get("session_id"),
+                    risk_level=data.get("risk_level", "low"),
+                )
+            )
+
+        if event_type:
+            events = [e for e in events if e.event_type == event_type]
+        if end_time:
+            events = [e for e in events if e.timestamp <= end_time]
+
+        return events[:limit]
 
     async def get_security_violations(
         self, user_id: Optional[int] = None, limit: int = 100

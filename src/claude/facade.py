@@ -39,13 +39,27 @@ class ClaudeIntegration:
         force_new: bool = False,
     ) -> ClaudeResponse:
         """Run Claude Code command with full integration."""
+        # Generate correlation ID for request tracing
+        import uuid
+
+        correlation_id = str(uuid.uuid4())[:8]
+
         logger.info(
             "Running Claude command",
+            correlation_id=correlation_id,
             user_id=user_id,
             working_directory=str(working_directory),
             session_id=session_id,
             prompt_length=len(prompt),
             force_new=force_new,
+        )
+
+        # Log full inbound message for audit trail
+        logger.info(
+            "Inbound message",
+            correlation_id=correlation_id,
+            user_id=user_id,
+            prompt=prompt,
         )
 
         # If no session_id provided, try to find an existing session for this
@@ -127,11 +141,24 @@ class ClaudeIntegration:
 
             logger.info(
                 "Claude command completed",
+                correlation_id=correlation_id,
                 session_id=response.session_id,
                 cost=response.cost,
                 duration_ms=response.duration_ms,
                 num_turns=response.num_turns,
                 is_error=response.is_error,
+                input_tokens=response.input_tokens,
+                output_tokens=response.output_tokens,
+            )
+
+            # Log full outbound response for audit trail
+            logger.info(
+                "Outbound response",
+                correlation_id=correlation_id,
+                user_id=user_id,
+                session_id=response.session_id,
+                response=response.content,
+                response_length=len(response.content),
             )
 
             return response
@@ -139,6 +166,7 @@ class ClaudeIntegration:
         except Exception as e:
             logger.error(
                 "Claude command failed",
+                correlation_id=correlation_id,
                 error=str(e),
                 user_id=user_id,
                 session_id=session.session_id,

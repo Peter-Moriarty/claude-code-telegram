@@ -26,7 +26,7 @@ from src.exceptions import ConfigurationError
 from src.notifications.service import NotificationService
 from src.projects import ProjectThreadManager, load_project_registry
 from src.scheduler.scheduler import JobScheduler
-from src.security.audit import AuditLogger, InMemoryAuditStorage
+from src.security.audit import AuditLogger, SQLiteAuditStorage
 from src.security.auth import (
     AuthenticationManager,
     InMemoryTokenStorage,
@@ -132,8 +132,8 @@ async def create_application(config: Settings) -> Dict[str, Any]:
     )
     rate_limiter = RateLimiter(config)
 
-    # Create audit storage and logger
-    audit_storage = InMemoryAuditStorage()  # TODO: Use database storage in production
+    # Create audit storage and logger (SQLite-backed, persists across restarts)
+    audit_storage = SQLiteAuditStorage(storage.audit)
     audit_logger = AuditLogger(audit_storage)
 
     # Create Claude integration components with persistent storage

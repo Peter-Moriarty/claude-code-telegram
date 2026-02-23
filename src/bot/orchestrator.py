@@ -501,8 +501,25 @@ class MessageOrchestrator:
             except Exception:
                 pass
 
+        # Token info from session
+        token_str = ""
+        claude_integration = context.bot_data.get("claude_integration")
+        if claude_integration and session_id:
+            try:
+                session_info = await claude_integration.get_session_info(
+                    session_id, update.effective_user.id
+                )
+                if session_info:
+                    in_tok = session_info.get("input_tokens", 0)
+                    out_tok = session_info.get("output_tokens", 0)
+                    if in_tok or out_tok:
+                        total_tok = in_tok + out_tok
+                        token_str = f" · Tokens: {total_tok:,} ({in_tok:,}in/{out_tok:,}out)"
+            except Exception:
+                pass
+
         await update.message.reply_text(
-            f"📂 {dir_display} · Session: {session_status}{cost_str}"
+            f"📂 {dir_display} · Session: {session_status}{cost_str}{token_str}"
         )
 
     def _get_verbose_level(self, context: ContextTypes.DEFAULT_TYPE) -> int:
