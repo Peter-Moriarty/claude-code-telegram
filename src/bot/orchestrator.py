@@ -7,6 +7,7 @@ classic mode, delegates to existing full-featured handlers.
 
 import asyncio
 import re
+import subprocess
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -290,6 +291,7 @@ class MessageOrchestrator:
             ("status", self.agentic_status),
             ("verbose", self.agentic_verbose),
             ("repo", self.agentic_repo),
+            ("rc", self.agentic_rc),
         ]
         if self.settings.enable_project_threads:
             handlers.append(("sync_threads", command.sync_threads))
@@ -348,6 +350,7 @@ class MessageOrchestrator:
             ("export", command.export_session),
             ("actions", command.quick_actions),
             ("git", command.git_command),
+            ("rc", self.agentic_rc),
         ]
         if self.settings.enable_project_threads:
             handlers.append(("sync_threads", command.sync_threads))
@@ -387,6 +390,7 @@ class MessageOrchestrator:
                 BotCommand("status", "Show session status"),
                 BotCommand("verbose", "Set output verbosity (0/1/2)"),
                 BotCommand("repo", "List repos / switch workspace"),
+                BotCommand("rc", "Start remote control session"),
             ]
             if self.settings.enable_project_threads:
                 commands.append(BotCommand("sync_threads", "Sync project topics"))
@@ -563,6 +567,93 @@ class MessageOrchestrator:
             f"Verbosity set to <b>{level}</b> ({labels[level]})",
             parse_mode="HTML",
         )
+
+    async def agentic_rc(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Start/restart Claude Code remote control and return the session URL."""
+        await update.message.reply_text("Starting remote control session...")
+
+        try:
+            # Restart the systemd service (kills old session, starts fresh)
+            subprocess.run(
+                ["sudo", "systemctl", "restart", "claude-remote-control"],
+                check=True,
+                capture_output=True,
+                timeout=10,
+            )
+
+            # Wait for the session URL to appear in journal logs
+            url = None
+            for attempt in range(15):
+                await asyncio.sleep(2)
+                result = subprocess.run(
+                    [
+                        "journalctl",
+                        "-u",
+                        "claude-remote-control",
+                        "--no-pager",
+                        "-n",
+                        "50",
+                        "--output=cat",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                for line in result.stdout.splitlines():
+                    if "claude.ai/code" in line or "anthropic.com" in line:
+                        # Extract URL from the log line
+                        for word in line.split():
+                            if "claude.ai" in word or "anthropic.com" in word:
+                                url = word.strip()
+                                break
+                    if url:
+                        break
+                if url:
+                    break
+
+            if url:
+                await update.message.reply_text(
+                    f"Remote control active.\n\n"
+                    f"<a href=\"{escape_html(url)}\">{escape_html(url)}</a>\n\n"
+                    f"Open in Claude app or browser.",
+                    parse_mode="HTML",
+                )
+            else:
+                # Grab last few log lines for debugging
+                result = subprocess.run(
+                    [
+                        "journalctl",
+                        "-u",
+                        "claude-remote-control",
+                        "--no-pager",
+                        "-n",
+                        "10",
+                        "--output=cat",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                tail = result.stdout.strip()[-500:] if result.stdout else "no logs"
+                await update.message.reply_text(
+                    "Remote control started but couldn't capture session URL.\n\n"
+                    f"<pre>{escape_html(tail)}</pre>",
+                    parse_mode="HTML",
+                )
+
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode() if e.stderr else str(e)
+            await update.message.reply_text(
+                f"Failed to start remote control:\n<pre>{escape_html(stderr[:500])}</pre>",
+                parse_mode="HTML",
+            )
+        except Exception as e:
+            await update.message.reply_text(
+                f"Error: <pre>{escape_html(str(e)[:500])}</pre>",
+                parse_mode="HTML",
+            )
 
     def _format_verbose_progress(
         self,
