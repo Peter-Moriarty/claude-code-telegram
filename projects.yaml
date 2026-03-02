@@ -1,0 +1,85 @@
+projects:
+  - slug: overlord
+    name: Overlord
+    path: agent-peter
+    enabled: true
+
+  - slug: jarvis
+    name: Jarvis
+    path: agent-peter/agent-engineering
+    enabled: true
+
+  - slug: bill-mcp
+    name: BILL MCP
+    path: agent-peter/bill-mcp
+    enabled: true
+
+  - slug: meetings-mcp
+    name: Meetings MCP
+    path: agent-peter/meetings-mcp
+    enabled: true
+
+  - slug: gary
+    name: Gary
+    path: agent-peter/agent-attract
+    enabled: true
+
+  - slug: team-view
+    name: Team View
+    path: agent-peter/team-view
+    enabled: true
+
+  - slug: unraid-manager
+    name: Unraid Manager
+    path: agent-peter/unraid-manager
+    enabled: true
+
+  - slug: calpe-digital
+    name: Calpe Digital
+    path: agent-peter/calpe-digital
+    enabled: true
+
+  - slug: sauron
+    name: Sauron
+    path: agent-peter/sauron
+    enabled: true
+
+  - slug: angela
+    name: Angela
+    path: agent-peter/agent-treasury
+    enabled: true
+
+  - slug: toby
+    name: Toby
+    path: agent-peter/agent-empower
+    enabled: true
+
+  - slug: jerry
+    name: Jerry
+    path: agent-peter/agent-engage
+    enabled: true
+
+  - slug: console-api
+    name: Console API
+    path: agent-peter/console-api
+    enabled: true
+
+  - slug: bill-wp-embed
+    name: BILL WP Product Embed
+    path: agent-peter/bill-wp-product-embed
+    enabled: true
+
+  - slug: stripe-wp-embed
+    name: Stripe WP Product Embed
+    path: agent-peter/stripe-wp-product-embed
+    enabled: true
+
+  - slug: mco-budget
+    name: Personal Budget
+    path: agent-peter/mco-budget
+    enabled: true
+
+  - slug: conversations-mcp
+    name: Conversations MCP
+    path: agent-peter/conversations-mcp
+    enabled: true
