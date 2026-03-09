@@ -493,6 +493,31 @@ test: add tests for authentication system
    print(config.model_dump())
    ```
 
+## Pending Contributions (from stale branches, reviewed 2026-03-09)
+
+### Docker Support - from Richard A (`improve-version-management` branch, 2026-02-21)
+
+Docker files were developed but not merged. The branch contained a mix of changes - PEP 621 migration, version reading, and empty message guards already landed on main separately. The Docker-specific files are net-new and worth applying:
+
+- **Dockerfile** - Multi-stage build with Poetry 2.x, gosu for privilege dropping
+- **docker-compose.yml** - Volume mounts for DB persistence and project directory
+- **docker-entrypoint.sh** (88 lines) - `APPROVED_DIRECTORY` remapping for container paths, Claude credential discovery (`~/.claude` mount detection)
+- **.dockerignore** - Standard exclusions
+- **Makefile targets** - `docker-build`, `docker-rebuild`, `docker-run`, `docker-stop`, `docker-logs`
+
+Note: The branch's `pyproject.toml` and `src/__init__.py` changes conflict with main. Only the Docker-related files should be applied. The Dockerfile uses `poetry-plugin-export` for Poetry 2.x compatibility and BuildKit cache mounts for faster rebuilds.
+
+### Budget Cap - from Richard A (`issue51/max-budget-usd` branch, 2026-02-23)
+
+The SDK supports `max_budget_usd` in `ClaudeAgentOptions` but it's not yet wired up. Small change (40 lines across 8 files):
+
+1. Add `DEFAULT_CLAUDE_MAX_COST_PER_REQUEST = 5.0` to `src/utils/constants.py`
+2. Add `claude_max_cost_per_request: float` field to `Settings` in `src/config/settings.py`
+3. Add `max_budget_usd=self.config.claude_max_cost_per_request` to `ClaudeAgentOptions` constructor in `src/claude/sdk_integration.py` (around line 254)
+4. Add env var validation in `src/config/loader.py`
+
+Note: Cannot be directly `git cherry-pick`ed due to code divergence in `sdk_integration.py` (branch predates `can_use_tool` callback and `SecurityValidator` constructor changes). Apply manually.
+
 ## Troubleshooting
 
 ### Common Issues
