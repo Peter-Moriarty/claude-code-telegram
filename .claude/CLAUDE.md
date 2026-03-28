@@ -1,24 +1,13 @@
-# Claude Code Telegram
+# Claude Code Telegram - Remote Claude Code Access via Telegram
 
-Telegram bot for remote Claude Code access. Python 3.10+, Poetry, python-telegram-bot, claude-agent-sdk.
+Python 3.10+ / Poetry / python-telegram-bot / claude-agent-sdk. GCE (`agent-peter-888888`, europe-southwest1).
+Run: `make run` | Test: `make test` | Lint: `make lint` | Format: `make format`
 
-## Docs
+## Context
 
-| Doc | Contents |
-|---|---|
-| `docs/architecture.md` | Purpose, tech stack, project structure, request flow, key patterns, security model |
-| `docs/deployment.md` | GCE instance, GSM config, systemd services, env vars, rate limiting |
-| `docs/gotchas.md` | Known quirks, safety rules, datetime convention, code style |
-| `docs/configuration.md` | Full configuration guide with all env vars and feature flags |
-| `docs/setup.md` | Installation, auth setup, agentic platform setup |
-| `docs/tools.md` | Allowed tools reference and security layers |
-
-## Commands
-
-```bash
-make dev          # Install all deps (including dev)
-make run          # Run the bot
-make test         # Run tests with coverage
-make lint         # Black + isort + flake8 + mypy
-make format       # Auto-format with black + isort
-```
+- Architecture, request flow, security model: `docs/architecture.md`
+- GCE instance, systemd, GSM config, env vars: `docs/deployment.md`
+- Known quirks, safety rules, code style: `docs/gotchas.md`
+- Full configuration guide, feature flags: `docs/configuration.md`
+- Installation and auth setup: `docs/setup.md`
+- Allowed tools reference and security layers: `docs/tools.md`
