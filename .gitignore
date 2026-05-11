@@ -146,3 +146,5 @@ data/
 sessions/
 backups/
 uploads/
+# Claude Code worktrees (auto-created, never commit)
+.claude/worktrees/
